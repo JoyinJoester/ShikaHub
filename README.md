@@ -1,6 +1,6 @@
 # ShikaHub 紹介
 
-貴方生活習慣管理 助力 Android應用 開発。極簡設計 重視 個人秘密保護 重点置。
+貴方导管管理 助力 Android應用 開発。極簡設計重点置。
 
 ## 主要特徴
 
@@ -32,7 +32,7 @@ APK点触 導入開始
 
 ```bash
 # 源碼取得
-git clone https://github.com/your-username/ShikaHub.git
+git clone https://github.com/JoyinJoester/ShikaHub.git
 
 # 構築実行
 cd ShikaHub
