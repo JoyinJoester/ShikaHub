@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 
@@ -23,21 +24,24 @@ fun GitHubStyleContributionCalendar(
     modifier: Modifier = Modifier,
     onDayClick: (DailyContribution) -> Unit = {}
 ) {
-    // 将数据按周分组，每周7天
-    val weeks = contributions.chunked(7)
+    // 将数据重新组织成列（每列7个格子）
+    val columns = contributions.chunked(7)
     
     Column(modifier = modifier) {
         // 贡献网格
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            weeks.forEach { week ->
+            columns.forEach { column ->
                 Column(
-                    modifier = Modifier.padding(horizontal = 2.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 1.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    week.forEach { contribution ->
+                    column.forEach { contribution ->
                         ContributionCell(
                             contribution = contribution,
                             onClick = { onDayClick(contribution) }
@@ -93,9 +97,9 @@ private fun ContributionCell(
 
     Box(
         modifier = Modifier
-            .size(20.dp)
+            .size(16.dp)
             .scale(scale)
-            .clip(RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(2.dp))
             .background(getContributionColor(contribution.tier))
             .clickable {
                 onClick()

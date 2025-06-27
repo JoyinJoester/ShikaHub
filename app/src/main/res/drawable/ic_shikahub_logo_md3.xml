@@ -8,8 +8,8 @@
     <!-- Centered rounded S letter -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M63,47C63,40 58,37 54,37C50,37 45,40 45,47C45,54 50,55.5 54,57C58,58.5 63,60 63,67C63,74 58,77 54,77C50,77 45,74 45,67"
-        android:strokeWidth="7"
+        android:pathData="M54,34C54,34 64,34 64,44C64,54 44,50 44,60C44,70 54,70 54,70"
+        android:strokeWidth="8"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:strokeColor="@android:color/system_accent2_800"/>

@@ -348,21 +348,21 @@ private fun buildContributionData(shikas: List<Shika>): List<DailyContribution> 
     // 今天的日期
     val today = LocalDate.now()
     
-    // 计算开始日期：从今天向前推算，确保今天在正确位置
-    // 首先计算今天是星期几（1-7，周一到周日）
-    val currentDayOfWeek = today.dayOfWeek.value
+    // 获取今天是星期几（0是周日，6是周六）
+    val currentDayOfWeek = today.dayOfWeek.value % 7
     
-    // 计算需要多少个完整的周才能让今天在倒数第二行
-    val weeksNeeded = 7  // 只显示最近7周
-    val daysToSubtract = (weeksNeeded - 1) * 7 + (currentDayOfWeek - 1)  // 减去天数使得周一在第一列
+    // 计算需要多少个完整的周才能让今天在最后一列
+    val weeksNeeded = 15  // 显示最近15周
+    val totalDays = weeksNeeded * 7
     
-    // 计算开始日期
-    val startDate = today.minusDays(daysToSubtract.toLong())
+    // 找到最后一列的周日（向前找到最近的周日）
+    val lastSunday = today.minusDays(currentDayOfWeek.toLong())
+    // 从最后一列的周日往前推算到第一列的周日
+    val startDate = lastSunday.minusWeeks((weeksNeeded - 1).toLong())
     
     android.util.Log.d("StatsScreen", "今天: $today")
-    android.util.Log.d("StatsScreen", "当前星期几: $currentDayOfWeek")
-    android.util.Log.d("StatsScreen", "需要减去的天数: $daysToSubtract")
-    android.util.Log.d("StatsScreen", "开始日期: $startDate")
+    android.util.Log.d("StatsScreen", "当前星期几(0=周日): $currentDayOfWeek")
+    android.util.Log.d("StatsScreen", "开始日期(第一个周日): $startDate")
     
     // 按日期分组记录，使用timestamp字段
     val recordsByDate = shikas
@@ -382,32 +382,31 @@ private fun buildContributionData(shikas: List<Shika>): List<DailyContribution> 
     }
     
     // 生成所有日期的贡献数据
-    val contributions = mutableListOf<DailyContribution>()
-    
-    // 从最早的日期开始，按照从左到右，从上到下的顺序生成数据
-    for (weekIndex in 0 until weeksNeeded) {
-        for (dayOfWeek in 1..7) { // 从周一(1)到周日(7)
-            val daysFromStart = weekIndex * 7 + (dayOfWeek - 1)
-            val date = startDate.plusDays(daysFromStart.toLong())
-            
-            val records = recordsByDate[date] ?: emptyList()
-            val count = records.size
-            
-            // 调试日志
-            if (count > 0) {
-                android.util.Log.d("StatsScreen", "发现记录 - 日期: $date, 数量: $count, 时间戳: ${records.map { it.timestamp }}")
-            }
-            
-            // 计算热度等级（0-3）
-            val tier = when {
-                count == 0 -> 0
-                count <= 3 -> 1
-                count <= 6 -> 2
-                else -> 3
-            }
-            
-            contributions.add(DailyContribution(date, count, tier))
+    val contributions = MutableList(totalDays) { index ->
+        // 计算在网格中的位置
+        val row = index % 7  // 0-6，表示星期几（0是周日，6是周六）
+        val col = index / 7  // 0-14，表示第几列
+        
+        // 计算实际日期：从开始日期（周日）算起，先加上对应的周数，再加上星期几的偏移
+        val date = startDate.plusWeeks(col.toLong()).plusDays(row.toLong())
+        
+        val records = recordsByDate[date] ?: emptyList()
+        val count = records.size
+        
+        // 调试日志
+        if (count > 0) {
+            android.util.Log.d("StatsScreen", "发现记录 - 日期: $date, 数量: $count, 时间戳: ${records.map { it.timestamp }}")
         }
+        
+        // 计算热度等级（0-3）
+        val tier = when {
+            count == 0 -> 0
+            count <= 3 -> 1
+            count <= 6 -> 2
+            else -> 3
+        }
+        
+        DailyContribution(date, count, tier)
     }
     
     return contributions
