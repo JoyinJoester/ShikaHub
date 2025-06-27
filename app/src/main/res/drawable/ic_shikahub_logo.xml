@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    
+    <!-- 圆滑的"鹿"字 -->
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M32,4 C17.6,4 6,15.6 6,30 C6,44.4 17.6,56 32,56 C46.4,56 58,44.4 58,30 C58,15.6 46.4,4 32,4 Z M32,8 C44.2,8 54,17.8 54,30 C54,42.2 44.2,52 32,52 C19.8,52 10,42.2 10,30 C10,17.8 19.8,8 32,8 Z"/>
+    
+    <!-- 鹿字主体 -->
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M25,18 L25,24 L20,24 L20,28 L25,28 L25,42 L29,42 L29,28 L35,28 L35,24 L29,24 L29,18 Z
+                         M32,20 L38,20 L38,24 L42,24 L42,28 L38,28 L38,42 L34,42 L34,28 L32,28 Z
+                         M22,30 L26,30 L26,34 L22,34 Z
+                         M36,30 L40,30 L40,34 L36,34 Z"/>
+</vector> 
