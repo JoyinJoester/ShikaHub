@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import takagi.ru.shikahub.data.entity.Shika
+import takagi.ru.shikahub.ui.components.DailyContribution
+import takagi.ru.shikahub.ui.components.GitHubStyleContributionCalendar
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -28,7 +30,6 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.WeekFields
 import java.util.Locale
 import kotlin.math.max
-import androidx.compose.foundation.clickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +69,8 @@ fun StatsScreen(
     
     // 构建贡献热图数据（过去12周的数据）
     val contributionData = buildContributionData(uiState.shikas)
+    
+    var selectedContribution by remember { mutableStateOf<DailyContribution?>(null) }
     
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -168,7 +171,7 @@ fun StatsScreen(
             // 统计概览卡片
             StatsOverviewCard(weekCount, monthCount, totalCount)
             
-            // 贡献热图
+            // GitHub风格贡献热图卡片
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -190,28 +193,46 @@ fun StatsScreen(
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     
-                    // 绘制贡献图
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    ) {
-                        for (week in 0 until 7) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                for (day in 0 until 17) {
-                                    val cellIndex = week + day * 7
-                                    if (cellIndex < contributionData.cells.size) {
-                                        val cell = contributionData.cells[cellIndex]
-                                        ContributionCell(
-                                            count = cell.count,
-                                            date = cell.date,
-                                            colorIntensity = cell.intensity
-                                        )
-                                    }
-                                }
-                            }
+                    GitHubStyleContributionCalendar(
+                        contributions = contributionData,
+                        modifier = Modifier.fillMaxWidth(),
+                        onDayClick = { contribution ->
+                            selectedContribution = contribution
                         }
+                    )
+                }
+            }
+            
+            // 选中日期的详细信息
+            selectedContribution?.let { contribution ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = contribution.date.format(
+                                DateTimeFormatter.ofPattern("yyyy年MM月dd日")
+                            ),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (contribution.count > 0) 
+                                "记录了 ${contribution.count} 次" 
+                            else 
+                                "暂无记录",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
                     }
                 }
             }
@@ -322,157 +343,72 @@ private fun StatsItem(label: String, count: Int) {
     }
 }
 
-@Composable
-private fun ContributionCell(
-    count: Int,
-    date: LocalDate,
-    colorIntensity: Int
-) {
-    val color = getContributionColor(colorIntensity, MaterialTheme.colorScheme.primary)
-    
-    Tooltip(
-        tooltipContent = {
-            Column(
-                modifier = Modifier
-                    .padding(8.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Text(
-                    text = date.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日")),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                Text(
-                    text = if (count > 0) "${count}次记录" else "无记录",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    color = if (count > 0) 
-                        MaterialTheme.colorScheme.primary 
-                    else 
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
-        }
-    ) {
-        Box(
-            modifier = Modifier
-                .size(14.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(color)
-        )
-    }
-}
-
 // 构建贡献热图数据
-private fun buildContributionData(shikas: List<Shika>): ContributionMapData {
+private fun buildContributionData(shikas: List<Shika>): List<DailyContribution> {
     // 今天的日期
     val today = LocalDate.now()
     
-    // 计算从当前日期向前推119天的日期（共17周）
-    val startDate = today.minusDays(118)
-    val cells = mutableListOf<ContributionCellData>()
+    // 计算开始日期：从今天向前推算，确保今天在正确位置
+    // 首先计算今天是星期几（1-7，周一到周日）
+    val currentDayOfWeek = today.dayOfWeek.value
     
-    // 按日期分组记录
-    val recordsByDate = shikas.groupBy { shika ->
-        val instant = java.time.Instant.ofEpochMilli(shika.timestamp)
-        instant.atZone(ZoneId.systemDefault()).toLocalDate()
+    // 计算需要多少个完整的周才能让今天在倒数第二行
+    val weeksNeeded = 7  // 只显示最近7周
+    val daysToSubtract = (weeksNeeded - 1) * 7 + (currentDayOfWeek - 1)  // 减去天数使得周一在第一列
+    
+    // 计算开始日期
+    val startDate = today.minusDays(daysToSubtract.toLong())
+    
+    android.util.Log.d("StatsScreen", "今天: $today")
+    android.util.Log.d("StatsScreen", "当前星期几: $currentDayOfWeek")
+    android.util.Log.d("StatsScreen", "需要减去的天数: $daysToSubtract")
+    android.util.Log.d("StatsScreen", "开始日期: $startDate")
+    
+    // 按日期分组记录，使用timestamp字段
+    val recordsByDate = shikas
+        .filter { it.timestamp > 0 } // 过滤掉无效时间戳
+        .groupBy { shika ->
+            // 转换时间戳为当地时区的日期
+            val instant = java.time.Instant.ofEpochMilli(shika.timestamp)
+            val zoneId = ZoneId.systemDefault()
+            instant.atZone(zoneId).toLocalDate()
+        }
+    
+    // 调试日志
+    android.util.Log.d("StatsScreen", "总记录数: ${shikas.size}")
+    android.util.Log.d("StatsScreen", "有效日期记录数: ${recordsByDate.size}")
+    recordsByDate.forEach { (date, records) ->
+        android.util.Log.d("StatsScreen", "日期: $date, 记录数: ${records.size}, 时间戳: ${records.map { it.timestamp }}")
     }
     
-    // 找出最大记录数，用于计算热度
-    val maxRecords = recordsByDate.values.maxOfOrNull { it.size } ?: 0
+    // 生成所有日期的贡献数据
+    val contributions = mutableListOf<DailyContribution>()
     
-    // 填充单元格数据（按行优先排列 7x17 共119个单元格）
-    // 反转列的顺序，使最近的日期显示在右侧
-    for (col in 16 downTo 0) {
-        for (row in 0 until 7) {
-            // 计算当前日期
-            val daysToAdd = (16 - col) * 7 + row
-            val currentDate = startDate.plusDays(daysToAdd.toLong())
+    // 从最早的日期开始，按照从左到右，从上到下的顺序生成数据
+    for (weekIndex in 0 until weeksNeeded) {
+        for (dayOfWeek in 1..7) { // 从周一(1)到周日(7)
+            val daysFromStart = weekIndex * 7 + (dayOfWeek - 1)
+            val date = startDate.plusDays(daysFromStart.toLong())
             
-            // 不超过今天的日期
-            if (currentDate.isAfter(today)) {
-                cells.add(ContributionCellData(0, currentDate, 0))
-                continue
-            }
-            
-            // 获取该日期的记录数
-            val records = recordsByDate[currentDate] ?: emptyList()
+            val records = recordsByDate[date] ?: emptyList()
             val count = records.size
             
-            // 计算热度等级（0-4，类似GitHub）
-            val intensity = when {
-                count == 0 -> 0
-                maxRecords <= 4 -> count
-                else -> {
-                    val step = maxRecords / 4.0
-                    minOf(4, (count / step).toInt() + 1)
-                }
+            // 调试日志
+            if (count > 0) {
+                android.util.Log.d("StatsScreen", "发现记录 - 日期: $date, 数量: $count, 时间戳: ${records.map { it.timestamp }}")
             }
             
-            cells.add(ContributionCellData(count, currentDate, intensity))
-        }
-    }
-    
-    return ContributionMapData(cells)
-}
-
-// 贡献图的颜色计算函数
-@Composable
-private fun getContributionColor(intensity: Int, baseColor: Color): Color {
-    return when (intensity) {
-        0 -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        1 -> baseColor.copy(alpha = 0.3f)
-        2 -> baseColor.copy(alpha = 0.5f)
-        3 -> baseColor.copy(alpha = 0.7f)
-        else -> baseColor.copy(alpha = 0.9f)
-    }
-}
-
-// 贡献图数据类
-private data class ContributionCellData(
-    val count: Int,
-    val date: LocalDate,
-    val intensity: Int
-)
-
-private data class ContributionMapData(
-    val cells: List<ContributionCellData>
-)
-
-// 简易提示框实现
-@Composable
-private fun Tooltip(
-    tooltipContent: @Composable () -> Unit,
-    content: @Composable () -> Unit
-) {
-    var showTooltip by remember { mutableStateOf(false) }
-    
-    Box {
-        Box(
-            modifier = Modifier
-                .clickable { showTooltip = !showTooltip }
-        ) {
-            content()
-        }
-        
-        // 提示内容（实际实现中可能需要改进定位逻辑）
-        if (showTooltip) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .wrapContentSize()
-                        .padding(8.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shadowElevation = 4.dp
-                ) {
-                    tooltipContent()
-                }
+            // 计算热度等级（0-3）
+            val tier = when {
+                count == 0 -> 0
+                count <= 3 -> 1
+                count <= 6 -> 2
+                else -> 3
             }
+            
+            contributions.add(DailyContribution(date, count, tier))
         }
     }
+    
+    return contributions
 }

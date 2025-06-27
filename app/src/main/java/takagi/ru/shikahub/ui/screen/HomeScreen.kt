@@ -62,17 +62,18 @@ fun HomeScreen(
             FloatingActionButton(
                 onClick = {
                     // 直接添加一个新卡片，不需要选择时间
+                    val now = System.currentTimeMillis()
                     val currentTime = java.time.LocalDateTime.now()
                         .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                     
                     val newShika = Shika(
-                        id = System.currentTimeMillis(),
+                        id = now,
                         title = "时间记录",
                         description = "创建于 $currentTime",
                         count = 0, // 未计时，初始显示0分钟
-                        createdAt = System.currentTimeMillis(),
-                        updatedAt = System.currentTimeMillis(),
-                        timestamp = System.currentTimeMillis()
+                        createdAt = now,
+                        updatedAt = now,
+                        timestamp = now
                     )
                     
                     // 添加到ViewModel并持久化到数据库

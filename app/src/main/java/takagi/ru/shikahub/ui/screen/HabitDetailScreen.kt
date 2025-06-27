@@ -112,9 +112,16 @@ fun ShikaDetailScreen(
     
     // 保存数据到ViewModel的函数
     val saveDataToViewModel = { updatedShika: Shika ->
+        // 确保时间戳使用当前时区
+        val now = System.currentTimeMillis()
+        val updatedShikaWithTimestamp = updatedShika.copy(
+            timestamp = now,
+            updatedAt = now
+        )
+        
         // 将更新后的数据保存到ViewModel
-        viewModel.updateShika(updatedShika)
-        android.util.Log.d("ShikaDetailScreen", "保存数据到ViewModel: ID=${updatedShika.id}, count=${updatedShika.count}")
+        viewModel.updateShika(updatedShikaWithTimestamp)
+        android.util.Log.d("ShikaDetailScreen", "保存数据到ViewModel: ID=${updatedShikaWithTimestamp.id}, count=${updatedShikaWithTimestamp.count}, timestamp=${updatedShikaWithTimestamp.timestamp}")
     }
     
     Scaffold(

@@ -12,5 +12,5 @@
         android:strokeWidth="7"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:strokeColor="@android:color/system_neutral2_800"/>
+        android:strokeColor="@android:color/system_accent2_800"/>
 </vector> 
